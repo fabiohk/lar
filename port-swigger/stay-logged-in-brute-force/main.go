@@ -2,6 +2,8 @@ package main
 
 import (
 	"log"
+	"io/ioutil"
+	"strings"
 )
 
 func solve(hostname string) {
@@ -20,8 +22,27 @@ func solve(hostname string) {
 			- If redirect (302 http status), try again
 			- Otherwise (200 http status), the password is known!
 	*/
+	candidatePasswords, err := readFromFile("assets/candidate-passwords.txt")
 
+	if err != nil {
+		log.Printf("Error reading the file %s", err)
+		return
+	}
+
+	log.Printf("Found %d candidates passwords", len(candidatePasswords))
 }
+
+
+func readFromFile(filePath string) ([]string, error) {
+	fileBytes, err := ioutil.ReadFile(filePath)
+
+	if err != nil {
+		return []string{}, err
+	}
+
+	return strings.Split(string(fileBytes), "\n"), nil
+}
+
 
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
