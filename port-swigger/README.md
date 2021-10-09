@@ -6,3 +6,4 @@ Here you can find some solutions that I code for the labs that you can find in t
 
 - [2FA bypass using a brute-force attack](./2fa-brute-force/)
 - [Brute-forcing a stay-logged-in cookie](./stay-logged-in-brute-force/)
+- [Offline password cracking](./offline-password-cracking/)
