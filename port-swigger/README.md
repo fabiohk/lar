@@ -9,3 +9,4 @@ Here you can find some solutions that I code for the labs that you can find in t
 - [Offline password cracking](./offline-password-cracking/)
 - [Password reset poisoning via middleware](./password-reset-poisoning)
 - [Password reset poisoning via dangling markup](./password-reset-poisoning-dangling-markup)
+- [Password brute force via password change](./password-brute-force-password-change)
