@@ -14,4 +14,4 @@ import comfortable_numbers
     ],
 )
 def test_should_gives_expected_output(l, r, expected_output):
-    assert expected_output == comfortable_numbers.solution(l, r)
+    assert comfortable_numbers.solution(l, r) == expected_output
