@@ -21,35 +21,25 @@ def reverseShuffleMerge(s: str) -> str:
     chars_to_found_frequencies = halve_dict_values(original_chars_frequency_map)
 
     reversed_s = s[::-1]
-    smallest_A = ""
-    smallest_char, smallest_char_index = "", -1
+    smallest_A = []
 
     for i, char in enumerate(reversed_s):
-        if is_smallest_char(char, chars_to_found_frequencies):
-            smallest_A += char
-            chars_to_found_frequencies[char] -= 1
-            smallest_char = char
-            smallest_char_index = i
-        elif is_critical_char(char, reversed_s[i::], chars_to_found_frequencies):
-            to_append_chars = ""
-            smallest_candidate_char = char
-            j = i - 1
-            while j > smallest_char_index:
-                candidate_char = reversed_s[j]
-                if (
-                    candidate_char <= smallest_candidate_char
-                    and chars_to_found_frequencies[candidate_char] > 0
+        if can_include(char, chars_to_found_frequencies):
+            if smallest_A:
+                last_element = smallest_A[-1]
+                while last_element > char and can_remove(
+                    last_element, reversed_s[i::], chars_to_found_frequencies
                 ):
-                    to_append_chars += candidate_char
-                    chars_to_found_frequencies[candidate_char] -= 1
-                    smallest_candidate_char = candidate_char
-                j -= 1
-            smallest_A += to_append_chars[::-1] + char
-            chars_to_found_frequencies[char] -= 1
-            smallest_char = char
-            smallest_char_index = i
+                    smallest_A.pop()
+                    chars_to_found_frequencies[last_element] += 1
+                    if not smallest_A:
+                        break
+                    last_element = smallest_A[-1]
 
-    return smallest_A
+            chars_to_found_frequencies[char] -= 1
+            smallest_A.append(char)
+
+    return "".join(smallest_A)
 
 
 def count_chars_frequency(string: str) -> Dict[str, int]:
@@ -65,22 +55,16 @@ def halve_dict_values(dictionary: Mapping[str, int]) -> Dict[str, int]:
     return {k: v // 2 for k, v in dictionary.items()}
 
 
-def is_smallest_char(char: str, chars_frequency: Mapping[str, int]) -> bool:
-    chars_with_frequency_not_zero = sorted(
-        [c for c in chars_frequency if chars_frequency[c] > 0]
-    )
-    if not chars_with_frequency_not_zero:
-        return False
-
-    smallest_char = chars_with_frequency_not_zero[0]
-
-    return smallest_char == char
+def can_include(char: str, chars_to_found_frequencies: Mapping[str, int]) -> bool:
+    return chars_to_found_frequencies[char] > 0
 
 
-def is_critical_char(
-    char: str, string, chars_to_found_frequencies: Mapping[str, int]
+def can_remove(
+    char: str, remaining_string: str, chars_to_found_frequencies: Mapping[str, int]
 ) -> bool:
-    return char_frequency(char, string) == chars_to_found_frequencies[char]
+    return (
+        char_frequency(char, remaining_string) - 1 >= chars_to_found_frequencies[char]
+    )
 
 
 def char_frequency(char: str, string: str) -> int:
