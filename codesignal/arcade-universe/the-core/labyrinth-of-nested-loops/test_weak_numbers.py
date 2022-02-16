@@ -1,6 +1,8 @@
-import pytest
-import weak_numbers
 from typing import Sequence
+
+import pytest
+
+import weak_numbers
 
 
 @pytest.mark.parametrize(

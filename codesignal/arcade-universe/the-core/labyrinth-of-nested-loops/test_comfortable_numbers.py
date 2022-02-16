@@ -1,4 +1,5 @@
 import pytest
+
 import comfortable_numbers
 
 

@@ -1,4 +1,4 @@
-from math import sqrt, ceil, floor
+from math import ceil, floor, sqrt
 
 
 def solution(a, b):
