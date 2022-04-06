@@ -17,9 +17,7 @@ def calculate_confortables_map(l, r):
 def calculate_confortables(integer):
     digits_sum = calculate_digits_sum(integer)
 
-    return [
-        i for i in range(integer - digits_sum, integer + digits_sum + 1) if i != integer
-    ]
+    return [i for i in range(integer - digits_sum, integer + digits_sum + 1) if i != integer]
 
 
 def calculate_digits_sum(integer):
