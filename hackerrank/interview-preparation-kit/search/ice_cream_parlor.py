@@ -14,7 +14,10 @@ def solver(costs: Sequence[int], money: int) -> Solution:
     for cost, ids in costs_and_ids_map.items():
         money_left = money - cost
         if money_left in costs_and_ids_map:
-            if money_left != cost or (money_left == cost and has_more_than_one_id(costs_and_ids_map[money_left])):
+            if money_left != cost or (
+                money_left == cost
+                and has_more_than_one_id(costs_and_ids_map[money_left])
+            ):
                 smaller_id = ids[0]
                 larger_id_idx = 0 if money_left != cost else 1
                 larger_id = costs_and_ids_map[money_left][larger_id_idx]
