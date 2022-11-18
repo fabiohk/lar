@@ -1,7 +1,4 @@
 from dataclasses import dataclass
-from platform import node
-from re import L
-from turtle import left
 from typing import Dict, Generator, List, Mapping, Optional, Sequence
 
 
@@ -63,6 +60,8 @@ def build_nodes_per_depth(binary_tree: Sequence[Node]) -> Dict[int, List[Node]]:
 
         if node_depth not in nodes_per_depth:
             nodes_per_depth[node_depth] = [node]
+        else:
+            nodes_per_depth[node_depth].append(node)
 
         if node.right is not None:
             to_visit_nodes.append((node.right, node_depth + 1))
@@ -94,7 +93,6 @@ def solution(
     # build binary tree
     binary_tree = build_binary_tree(indexes)
     nodes_per_depth = build_nodes_per_depth(binary_tree)
-
     results = []
     # for each query, swap childs
     for k in queries:

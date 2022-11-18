@@ -73,5 +73,4 @@ def assert_lists_are_equal(
     list: List[int], expected_list: List[int], message_error: str
 ):
     assert len(list) == len(expected_list), message_error
-    # breakpoint()
     assert all(n == m for n, m in zip(list, expected_list)), message_error
