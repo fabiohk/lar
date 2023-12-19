@@ -26,12 +26,12 @@ def print_map(map: list[list[Space]]):
     print("-----")
 
 # returns the number of columns to the left of where the reflection occurs, otherwise returns 0
-def has_vertical_reflection(map: list[list[Space]], print_reflection: bool = False) -> int:
+def has_vertical_reflection(map: list[list[Space]], reflection_to_disconsider: int, /, print_reflection: bool = False) -> int:
     map_list = [list(row) for row in map]
     rotated_map = rotate_clowise(map_list)
     if print_reflection:
         print_map(rotated_map)
-    return has_horizontal_reflection(list(list(row) for row in rotated_map))
+    return has_horizontal_reflection(list(list(row) for row in rotated_map), reflection_to_disconsider)
 
 def rotate_clowise(map: list[list[Space]]) -> list[list[Space]]:
     n, m = len(map), len(map[0])
@@ -54,21 +54,21 @@ def empty_space(n: int, m: int) -> list[list[Space]]:
     return map
 
 # returns the number of rows above where the reflection occurs, otherwise returns 0
-def has_horizontal_reflection(map: list[list[Space]]) -> int:
+def has_horizontal_reflection(map: list[list[Space]], reflection_to_disconsider: int) -> int:
     if len(map) % 2 == 0:
         number_of_rows = loop_through_inside(map)
-        if number_of_rows > 0:
+        if number_of_rows > 0 and number_of_rows != reflection_to_disconsider:
             return number_of_rows
         number_of_rows = loop_skipping_first(map[2:], 2)
-        if number_of_rows > 0:
+        if number_of_rows > 0 and number_of_rows != reflection_to_disconsider:
             return number_of_rows
         number_of_rows = loop_skipping_last(map[:-2])
-        return number_of_rows
+        return number_of_rows if number_of_rows != reflection_to_disconsider else 0
     number_of_rows = loop_skipping_first(map[1:], 1)
-    if number_of_rows > 0:
+    if number_of_rows > 0 and number_of_rows != reflection_to_disconsider:
         return number_of_rows
     number_of_rows = loop_skipping_last(map[:-1])
-    return number_of_rows
+    return number_of_rows if number_of_rows != reflection_to_disconsider else 0
     
 
 def loop_through_inside(map: list[list[Space]]) -> int:
@@ -112,16 +112,6 @@ def loop_skipping_last(map: list[list[Space]]) -> int:
     return number_of_rows
 
 
-def has_horizontal_perfect_reflection(map: list[list[Space]]) -> int:
-    number_of_rows_above_reflection = has_horizontal_reflection(map)
-    i, j = number_of_rows_above_reflection-1, number_of_rows_above_reflection
-    while i >= 0 and j < len(map):
-        if not are_lines_equal(map[i], map[j]):
-            return 0
-        i -= 1
-        j += 1
-    return number_of_rows_above_reflection
-
 
 def are_lines_equal(line_a: list[Space], line_b: list[Space]) -> bool:
     print_debug("".join(line_a))
@@ -149,8 +139,8 @@ def parse_line(line: str) -> list[Space]:
 
 
 def summarize_notes(patterns: list[list[list[Space]]]) -> int:
-    number_of_columns_with_vertical_reflection = [has_vertical_reflection(pattern) for pattern in patterns] if not DEBUG_HORIZONTAL else [0]
-    number_of_rows_with_horizontal_reflection = [has_horizontal_reflection(pattern) for pattern in patterns] if not DEBUG_VERTICAL else [0]
+    number_of_columns_with_vertical_reflection = [has_vertical_reflection(pattern, 0) for pattern in patterns] if not DEBUG_HORIZONTAL else [0]
+    number_of_rows_with_horizontal_reflection = [has_horizontal_reflection(pattern, 0) for pattern in patterns] if not DEBUG_VERTICAL else [0]
 
     print_debug(number_of_columns_with_vertical_reflection)
     print_debug(number_of_rows_with_horizontal_reflection)
@@ -162,29 +152,23 @@ def summarize_notes(patterns: list[list[list[Space]]]) -> int:
 
 def find_new_reflection_smudging_space(pattern: list[list[Space]]) -> list[tuple[int, int]]:
     possible_results = []
-    possible_results_2 = []
 
-    columns_with_vertical_reflection = has_vertical_reflection(pattern)
-    rows_with_horizontal_reflection = has_horizontal_reflection(pattern)
+    columns_with_vertical_reflection = has_vertical_reflection(pattern, 0)
+    rows_with_horizontal_reflection = has_horizontal_reflection(pattern, 0)
 
     n, m = len(pattern), len(pattern[0])
     for i in range(n):
         for j in range(m):
             old_pattern = pattern[i][j]
             pattern[i][j] = Space.ASH if old_pattern == Space.ROCK else Space.ROCK
-            columns_with_vertical_reflection_for_new_pattern = has_vertical_reflection(pattern)
-            rows_with_horizontal_reflection_for_new_pattern = has_horizontal_reflection(pattern)
+            columns_with_vertical_reflection_for_new_pattern = has_vertical_reflection(pattern, columns_with_vertical_reflection)
+            rows_with_horizontal_reflection_for_new_pattern = has_horizontal_reflection(pattern, rows_with_horizontal_reflection)
             if columns_with_vertical_reflection_for_new_pattern != columns_with_vertical_reflection or rows_with_horizontal_reflection_for_new_pattern != rows_with_horizontal_reflection:
-                if columns_with_vertical_reflection_for_new_pattern > 0 or rows_with_horizontal_reflection_for_new_pattern > 0:
-                    possible_results.append((columns_with_vertical_reflection_for_new_pattern, rows_with_horizontal_reflection_for_new_pattern))
-            if columns_with_vertical_reflection == 0 and columns_with_vertical_reflection_for_new_pattern > 0:
-                possible_results_2.append((columns_with_vertical_reflection_for_new_pattern, rows_with_horizontal_reflection_for_new_pattern))
-            if rows_with_horizontal_reflection == 0 and rows_with_horizontal_reflection_for_new_pattern > 0:
-                possible_results_2.append((columns_with_vertical_reflection_for_new_pattern, rows_with_horizontal_reflection_for_new_pattern))
+                if 0 <= i < rows_with_horizontal_reflection_for_new_pattern * 2 or 0 <= j < columns_with_vertical_reflection_for_new_pattern * 2:
+                    if columns_with_vertical_reflection_for_new_pattern > 0 or rows_with_horizontal_reflection_for_new_pattern > 0:
+                        possible_results.append((columns_with_vertical_reflection_for_new_pattern, rows_with_horizontal_reflection_for_new_pattern))
             pattern[i][j] = old_pattern
     
-    print((columns_with_vertical_reflection, rows_with_horizontal_reflection), possible_results)
-    print((columns_with_vertical_reflection, rows_with_horizontal_reflection), possible_results_2)
     if not possible_results:
         return [(0, 0)]
         
@@ -202,7 +186,6 @@ def summarize_notes_smudging_space(patterns: list[list[Space]]) -> int:
     for pattern in patterns:
         possible_results = find_new_reflection_smudging_space(pattern)
         columns, rows = possible_results[0]
-        print((columns, rows))
         number_of_columns_with_vertical_reflection += columns
         number_of_rows_with_horizontal_reflection += rows
 
