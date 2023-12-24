@@ -2,6 +2,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import StrEnum
 from queue import SimpleQueue
+import re
 from typing import NamedTuple, Union
 
 class Direction(StrEnum):
@@ -216,12 +217,90 @@ def count_trenches_terrain(map: Map) -> int:
 def ground_level_map(n: int, m: int) -> Map:
     return [[Terrain.GROUND_LEVEL for __ in range(m)] for _ in range(n)]
 
+def convert_color_to_step(color: str) -> DigStep:
+    digits_only: str = re.sub(r"[\(|\)|#]*", "", color)
+    direction = digits_only[-1]
+    hexadecimal = digits_only[:-1]
+    return DigStep(translate_direction(int(direction)), int(hexadecimal, 16), color)
+
+
+def translate_direction(direction_int: int) -> Direction:
+    match direction_int:
+        case 0:
+            return Direction.RIGHT
+        case 1:
+            return Direction.DOWN
+        case 2:
+            return Direction.LEFT
+        case 3:
+            return Direction.UP
+
+# Shoelace formula
+def calculate_area(positions: list[Position]) -> int:
+    determinant_sum = sum(calculate_2_x_2_matrix_determinant([x, y]) for x, y in zip(positions, positions[1:] + [positions[0]]))
+    return abs(determinant_sum) // 2
+
+def calculate_2_x_2_matrix_determinant(matrix: list[Position]) -> int:
+    return matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0]
+
+# Pick's theorem
+# Area = interior_points + boundary_points/2 - 1
+# Area + 1 = interior_points + boundary_points/2
+# Area + 1 + boundary_points/2 = interior_points + boundary_points
+def count_trenches_terrain_using_area(area: int, boundary_points: int) -> int:
+    return area + boundary_points // 2 + 1
+
+
+def get_vertices_positions(dig_steps: list[DigStep], start_position: Position) -> list[Position]:
+    vertices_positions = []
+    i, j = start_position
+    max_i, min_i = i, i
+    max_j, min_j = j, j
+    for dig_step in dig_steps:
+        direction, meters = dig_step.direction, dig_step.meters
+        max_i, min_i = max(i, max_i), min(i, min_i)
+        max_j, min_j = max(j, max_j), min(j, min_j)
+        match direction:
+            case Direction.UP:
+                i -= meters
+            case Direction.DOWN:
+                i += meters
+            case Direction.LEFT:
+                j -= meters
+            case Direction.RIGHT:
+                j += meters
+        vertices_positions.append(Position(i, j))
+    print_min_max(max_i, min_i, max_j, min_j)
+    return vertices_positions
+
+def count_boundary_positions(vertices_positions: list[Position]) -> int:
+    return sum(abs(x.i - y.i) + abs(x.j - y.j) for x, y in zip(vertices_positions, vertices_positions[1:] + [vertices_positions[0]]))
+
+
 steps = read_input("./example")
 map = dig_edges(steps, ground_level_map(10, 7), Position(0, 0))
 interior_digged = dig_interior(map, Position(0, 0), Position(1, 1))
 print(count_trenches_terrain(interior_digged))
+vertices_positions = get_vertices_positions(steps, Position(0, 0))
+area = calculate_area(vertices_positions)
+boundary_positions_count = count_boundary_positions(vertices_positions)
+print(count_trenches_terrain_using_area(area, boundary_positions_count))
+new_steps = [convert_color_to_step(step.color) for step in steps]
+vertices_positions = get_vertices_positions(new_steps, Position(0, 0))
+area = calculate_area(vertices_positions)
+boundary_positions_count = count_boundary_positions(vertices_positions)
+print(count_trenches_terrain_using_area(area, boundary_positions_count))
 
 steps = read_input("./input")
 map = dig_edges(steps, ground_level_map(450, 450), Position(212, 97))
 interior_digged = dig_interior(map, Position(212, 97), Position(124, 1))
 print(count_trenches_terrain(interior_digged))
+vertices_positions = get_vertices_positions(steps, Position(212, 97))
+area = calculate_area(vertices_positions)
+boundary_positions_count = count_boundary_positions(vertices_positions)
+print(count_trenches_terrain_using_area(area, boundary_positions_count))
+new_steps = [convert_color_to_step(step.color) for step in steps]
+vertices_positions = get_vertices_positions(new_steps, Position(21135647, 4132937))
+area = calculate_area(vertices_positions)
+boundary_positions_count = count_boundary_positions(vertices_positions)
+print(count_trenches_terrain_using_area(area, boundary_positions_count))
