@@ -1,8 +1,9 @@
 from collections import defaultdict
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from enum import StrEnum
 from queue import SimpleQueue
-from typing import Generator, NamedTuple, Optional
+from typing import NamedTuple, Optional
 
 class Direction(StrEnum):
     RIGHT = "RIGHT"
@@ -48,7 +49,7 @@ def find_distances_from_source(source: Node, graph: Graph, NOT_CALCULATED_DISTAN
 
     return distances
 
-def get_adjacent_nodes(node: Node, current_direction: Optional[Direction], consecutive_nodes: int, graph: Graph) -> Generator[tuple[Position, Direction, int], None, None]:
+def get_adjacent_nodes(node: Node, current_direction: Optional[Direction], consecutive_nodes: int, graph: Graph) -> Iterator[tuple[Position, Direction, int]]:
     n, m = len(graph), len(graph[0])
     i, j, _ = node.position
     possible_adjacent_nodes_positions = [(Position(i-1, j), Direction.TOP), (Position(i+1, j), Direction.DOWN), (Position(i, j-1), Direction.LEFT), (Position(i, j+1), Direction.RIGHT)]
@@ -117,7 +118,7 @@ def find_distances_from_source_with_crucibles(source: Node, graph: Graph, NOT_CA
     return distances
 
 
-def get_adjacent_nodes_with_crucibles(node: Node, current_direction: Optional[Direction], consecutive_nodes: int, graph: Graph) -> Generator[tuple[Position, Direction, int], None, None]:
+def get_adjacent_nodes_with_crucibles(node: Node, current_direction: Optional[Direction], consecutive_nodes: int, graph: Graph) -> Iterator[tuple[Position, Direction, int]]:
     n, m = len(graph), len(graph[0])
     i, j, _ = node.position
     match current_direction:
